@@ -1,0 +1,19 @@
+# Build artifacts
+game
+game.exe
+*.o
+*.a
+*.dylib
+*.zip
+dist/
+
+# OS metadata
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+compile_flags.txt
+
+.clang-format
