@@ -6,6 +6,7 @@ game.exe
 *.dylib
 *.zip
 dist/
+*.dSYM/
 
 # OS metadata
 .DS_Store
