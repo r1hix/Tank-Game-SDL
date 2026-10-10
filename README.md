@@ -16,10 +16,10 @@ This project is a rebuild of the original [Tank-Game-RayLib](https://github.com/
 
 | Action | Player 1 (Red Tank) | Player 2 (Blue Tank) |
 | :--- | :--- | :--- |
-| Move Up | `W` | `Up Arrow` |
-| Move Down | `S` | `Down Arrow` |
-| Move Left | `A` | `Left Arrow` |
-| Move Right | `D` | `Right Arrow` |
+| Move Forward | `W` | `Up Arrow` |
+| Move Backward | `S` | `Down Arrow` |
+| Rotate Left | `A` | `Left Arrow` |
+| Rotate Right | `D` | `Right Arrow` |
 
 ## Prerequisites
 
@@ -65,7 +65,7 @@ Work in progress rebuild from the RayLib original.
 - [x] SDL3 windowing and hardware-accelerated 2D renderer
 - [x] Frame timing with delta time (`SDL_GetTicks`) & VSync
 - [x] 2-player input handling (`SDL_GetKeyboardState`)
-- [ ] Tank rotation and orientation
+- [x] Tank rotation and orientation (`SDL_RenderTextureRotated`)
 - [ ] Obstacle and boundary collision detection
 - [ ] Bullet firing and ricochet bounce physics
 - [ ] Sound playback via SDL3 audio streams

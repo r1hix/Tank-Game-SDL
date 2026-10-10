@@ -1,9 +1,13 @@
 #include <SDL3/SDL.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
 bool isRunning = false;
+
+float radToDeg(float rad) { return rad * (180 / M_PI); }
+float degToRad(float deg) { return deg * (M_PI / 180); }
 
 #define SCREEN_WIDTH 1000
 #define SCREEN_HEIGHT 800
@@ -19,8 +23,10 @@ const SDL_Color BLUE = {.r = 0, .g = 0, .b = 255, .a = 255};
 const int TANK_WIDTH = 100;
 const int TANK_HEIGHT = 70;
 const float TANK_SPEED = 300.0f;
-const float TANK_ROTATION_SPEED = 2.0f;
+const float TANK_ROTATION_SPEED = 150.0f;
 
+const float tank1InitRot = 0.0f;
+const float tank2InitRot = 180.0f;
 const Vector tank1InitPos = {.x = 100,
                              .y = SCREEN_HEIGHT / 2.0f - TANK_HEIGHT / 2.0f};
 const Vector tank2InitPos = {.x = SCREEN_WIDTH - TANK_WIDTH - 100,
@@ -42,23 +48,36 @@ typedef struct Tank {
   SDL_FRect rect;
   Uint8 lives, playerID;
   float speed, rotation, rotationSpeed;
+  SDL_FPoint origin;
   SDL_Color color;
   TankControls controls;
 } Tank;
 
 void UpdateTank(Tank *tank, float deltaTime) {
+
+  float dx = cosf(degToRad(tank->rotation)) * tank->speed * deltaTime;
+  float dy = sinf(degToRad(tank->rotation)) * tank->speed * deltaTime;
+
   if (keys[tank->controls.up]) {
-    tank->rect.y -= tank->speed * deltaTime;
+    tank->rect.x += dx;
+    tank->rect.y += dy;
   }
   if (keys[tank->controls.down]) {
-    tank->rect.y += tank->speed * deltaTime;
+    tank->rect.x -= dx;
+    tank->rect.y -= dy;
   }
   if (keys[tank->controls.left]) {
-    tank->rect.x -= tank->speed * deltaTime;
+    tank->rotation -= tank->rotationSpeed * deltaTime;
   }
   if (keys[tank->controls.right]) {
-    tank->rect.x += tank->speed * deltaTime;
+    tank->rotation += tank->rotationSpeed * deltaTime;
   }
+}
+
+void DrawTank(Tank *tank, SDL_Renderer *renderer, SDL_Texture *texture) {
+  SDL_SetTextureColorMod(texture, tank->color.r, tank->color.g, tank->color.b);
+  SDL_RenderTextureRotated(renderer, texture, NULL, &tank->rect, tank->rotation,
+                           &tank->origin, SDL_FLIP_NONE);
 }
 
 int main(void) {
@@ -70,9 +89,10 @@ int main(void) {
                .w = TANK_WIDTH,
                .h = TANK_HEIGHT},
       .speed = TANK_SPEED,
-      .rotation = 0.0f,
+      .rotation = tank1InitRot,
       .rotationSpeed = TANK_ROTATION_SPEED,
       .color = RED,
+      .origin = {.x = TANK_WIDTH / 2.0f, .y = TANK_HEIGHT / 2.0f},
       .controls = {.up = SDL_SCANCODE_W,
                    .down = SDL_SCANCODE_S,
                    .left = SDL_SCANCODE_A,
@@ -87,8 +107,9 @@ int main(void) {
                .w = TANK_WIDTH,
                .h = TANK_HEIGHT},
       .speed = TANK_SPEED,
-      .rotation = 0.0f,
+      .rotation = tank2InitRot,
       .rotationSpeed = TANK_ROTATION_SPEED,
+      .origin = {.x = TANK_WIDTH / 2.0f, .y = TANK_HEIGHT / 2.0f},
       .color = BLUE,
       .controls = {.up = SDL_SCANCODE_UP,
                    .down = SDL_SCANCODE_DOWN,
@@ -120,8 +141,34 @@ int main(void) {
   }
 
   SDL_SetRenderVSync(renderer, 1);
-
   lastFrameTime = SDL_GetTicks();
+
+  // CPU allocates space for a surface in RAM, it's just a buffer for pixel data
+  // Buffer size is 4 bytes because 1 pixel = 4 bytes (RGBA)
+  SDL_Surface *surface = SDL_CreateSurface(1, 1, SDL_PIXELFORMAT_RGBA32);
+  if (!surface) {
+    printf("%s\n", SDL_GetError());
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 1;
+  }
+
+  // CPU fills the buffer with white color
+  SDL_FillSurfaceRect(surface, NULL, 0xFFFFFFFF);
+
+  // GPU pulls the buffer from RAM to VRAM
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+  if (!texture) {
+    printf("%s\n", SDL_GetError());
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 1;
+  }
+
+  // Free the surface from RAM, as it's only needed in VRAM
+  SDL_DestroySurface(surface);
 
   SDL_Event event;
   while (isRunning) {
@@ -148,17 +195,14 @@ int main(void) {
     // Clear the screen with the background color
     SDL_RenderClear(renderer);
     // Draw Tank 1
-    SDL_SetRenderDrawColor(renderer, tank1.color.r, tank1.color.g,
-                           tank1.color.b, tank1.color.a);
-    SDL_RenderFillRect(renderer, &tank1.rect);
+    DrawTank(&tank1, renderer, texture);
     // Draw Tank 2
-    SDL_SetRenderDrawColor(renderer, tank2.color.r, tank2.color.g,
-                           tank2.color.b, tank2.color.a);
-    SDL_RenderFillRect(renderer, &tank2.rect);
+    DrawTank(&tank2, renderer, texture);
     // Update the screen
     SDL_RenderPresent(renderer);
   }
 
+  SDL_DestroyTexture(texture);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
